@@ -11,18 +11,6 @@
  const taskForm = document.getElementById("taskForm")
  const taskTable = document.getElementById("taskTable")
 
- // Function to mark a task as complete
- function markTaskComplete(button) {
-    const row = button.closest('tr');
-    row.style.textDecoration = 'line-through'; // Example of marking as complete
- }
- 
- // Function to remove a task
- function removeTask(button) {
-    const row = button.closest('tr');
-    row.remove(); // Remove the row from the DOM
- }
-
  // Section 4: Functions and Event Listeners
  // Function to handle form submissions
  function handleSubmission(event) {
