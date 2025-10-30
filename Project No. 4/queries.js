@@ -1,10 +1,11 @@
 const Pool = require('pg').Pool
 const pool = new Pool({
-  user: 'me',
-  host: 'localhost',
-  database: 'api',
-  password: 'password',
-  port: 5432,
+  user: process.env.PGUSER || 'postgres',
+  host: process.env.PGHOST || 'localhost',
+  database: process.env.PGDATABASE || 'api',
+  password: process.env.PGPASSWORD || '',
+  port: parseInt(process.env.PGPORT || '5432', 10),
+  ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
 })
 
 const getUsers = (request, response) => {

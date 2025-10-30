@@ -4,9 +4,14 @@
     "description": "RESTful API with Node.js, Express, and PostgreSQL",
     "main": "index.js",
     "license": "MIT",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node index.js"
+    },
     "dependencies": {
         "body-parser": "^2.2.0",
         "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
         "express": "^5.1.0",
         "express-validator": "^7.3.0",
         "helmet": "^8.1.0",
