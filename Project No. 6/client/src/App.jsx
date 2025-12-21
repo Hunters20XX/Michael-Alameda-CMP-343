@@ -41,7 +41,7 @@ function App() {
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
         {renderPage()}
       </div>
-    </div>
+      </div>
   )
 }
 
