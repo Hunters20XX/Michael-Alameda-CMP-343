@@ -1,0 +1,26 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  font-weight: bold;
+  color: #646cff;
+}
+
+.logo-small {
+  font-size: 1rem;
+}
+
+.logo-medium {
+  font-size: 1.5rem;
+}
+
+.logo-large {
+  font-size: 2rem;
+}
+
+.logo-text {
+  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
