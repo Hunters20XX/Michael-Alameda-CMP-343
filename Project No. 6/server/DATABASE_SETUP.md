@@ -42,7 +42,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=posts_db
 DB_USER=postgres
-DB_PASSWORD=password
+DB_PASSWORD=120202
 ```
 
 ## Troubleshooting

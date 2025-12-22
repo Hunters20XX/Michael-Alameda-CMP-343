@@ -33,12 +33,14 @@ A modern, responsive full-stack blog application built with React, Express.js, a
 - **Performance Monitoring**: Real-time database and API metrics
 
 ### 🎯 Advanced Features
-- **Database Integration**: PostgreSQL with connection pooling
-- **API Documentation**: Self-documenting endpoints with examples
-- **Bulk Operations**: Efficient batch processing with transactions
-- **Pagination**: Efficient data loading with metadata
-- **Search Functionality**: Full-text search across multiple fields
-- **Statistics Dashboard**: Real-time analytics and metrics
+- **Real-Time Updates**: WebSocket-powered live notifications and activity feeds
+- **Database Integration**: PostgreSQL with connection pooling and transactions
+- **API Documentation**: Self-documenting endpoints with comprehensive examples
+- **Bulk Operations**: Efficient batch processing with ACID transactions
+- **Pagination**: Server-side pagination with metadata and performance optimization
+- **Search Functionality**: Full-text search across multiple fields with real-time results
+- **Statistics Dashboard**: Live analytics and metrics with real-time updates
+- **Optimistic UI**: Instant feedback with error rollback for better UX
 
 ## 🛠️ Tech Stack
 
@@ -207,6 +209,11 @@ https://your-deployment-url.vercel.app/api
 - `GET /api/docs` - API documentation
 - `GET /api/db/status` - Database status
 
+#### Real-Time WebSocket Events
+- `post-created` - New post notifications
+- `like-updated` - Live like count updates
+- `user-activity` - Real-time user activity feed
+
 ### Request/Response Examples
 
 #### Create Post
@@ -222,6 +229,25 @@ POST /api/posts
 #### Search Posts
 ```javascript
 GET /api/posts/search?q=react&page=1&limit=5
+```
+
+#### Real-Time Events (WebSocket)
+```javascript
+// Listen for new posts
+socket.on('post-created', (post) => {
+  console.log('New post:', post.title);
+});
+
+// Listen for like updates
+socket.on('like-updated', (data) => {
+  console.log('Post liked:', data.postId, 'Likes:', data.likes);
+});
+
+// Track user activity
+socket.emit('user-activity', {
+  type: 'view-post',
+  postId: 123
+});
 ```
 
 ## 🎯 Usage

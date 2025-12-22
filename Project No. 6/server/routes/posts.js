@@ -50,6 +50,14 @@ router.post('/', strictRateLimit, validatePostData, async (req, res) => {
     const { title, content, author } = req.body
 
     const newPost = await createPost({ title: title.trim(), content: content.trim(), author: author.trim() })
+
+    // Emit real-time event for new post
+    const io = req.app.get('io')
+    io.to('general').emit('post-created', {
+      ...newPost,
+      timestamp: new Date().toISOString()
+    })
+
     res.status(201).json(newPost)
   } catch (error) {
     console.error('Error creating post:', error)
@@ -92,6 +100,14 @@ router.patch('/:id/like', strictRateLimit, validateId, async (req, res) => {
     if (!updatedPost) {
       return res.status(404).json({ error: 'Post not found' })
     }
+
+    // Emit real-time event for like update
+    const io = req.app.get('io')
+    io.to('general').emit('like-updated', {
+      postId: req.params.id,
+      likes: updatedPost.likes,
+      timestamp: new Date().toISOString()
+    })
 
     res.json(updatedPost)
   } catch (error) {

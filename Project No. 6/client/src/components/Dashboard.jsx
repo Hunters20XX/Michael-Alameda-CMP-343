@@ -3,6 +3,7 @@ import './Dashboard.css'
 import Card from './Card'
 import Button from './Button'
 import { api, errorHandlers } from '../utils/api'
+import socketManager from '../utils/socket'
 
 function Dashboard() {
   const [posts, setPosts] = useState([])
@@ -20,6 +21,13 @@ function Dashboard() {
     author: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [notification, setNotification] = useState(null)
+
+  // Notification helper
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 5000)
+  }
 
   // Load real stats on component mount
   useEffect(() => {
@@ -37,6 +45,33 @@ function Dashboard() {
       }
     }
     loadStats()
+
+    // Connect to WebSocket and listen for real-time updates
+    socketManager.connect()
+
+    // Listen for new posts created by others
+    socketManager.onPostCreated((newPost) => {
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalPosts: prev.totalPosts + 1
+      }))
+
+      // Show notification
+      showNotification(`New post created: "${newPost.title}"`)
+    })
+
+    // Listen for like updates
+    socketManager.onLikeUpdated((data) => {
+      setStats(prev => ({
+        ...prev,
+        totalLikes: data.likes > prev.totalLikes ? prev.totalLikes + 1 : prev.totalLikes
+      }))
+    })
+
+    return () => {
+      socketManager.disconnect()
+    }
   }, [])
 
   const handleInputChange = (e) => {
@@ -77,6 +112,9 @@ function Dashboard() {
         author: optimisticUpdate.postData.author
       })
 
+      // Emit real-time event for new post
+      socketManager.emit('new-post', newPost)
+
       // Replace optimistic post with real post
       setPosts(prevPosts =>
         prevPosts.map(post =>
@@ -86,8 +124,20 @@ function Dashboard() {
         )
       )
 
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalPosts: prev.totalPosts + 1
+      }))
+
       console.log('Post created successfully:', newPost)
-      alert('Post created successfully!')
+      showNotification('Post created successfully!', 'success')
+
+      // Track activity
+      socketManager.trackActivity('create-post', {
+        postId: newPost.id,
+        title: newPost.title
+      })
 
     } catch (error) {
       // Remove optimistic post on error
@@ -112,6 +162,22 @@ function Dashboard() {
   return (
     <div className="dashboard">
       <h1 className="dashboard-title">Dashboard</h1>
+
+      {/* Real-time Notification */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <span className="notification-icon">
+            {notification.type === 'success' ? '✅' : 'ℹ️'}
+          </span>
+          <span className="notification-message">{notification.message}</span>
+          <button
+            className="notification-close"
+            onClick={() => setNotification(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
       
       <div className="dashboard-stats">
         <Card title="Total Posts">

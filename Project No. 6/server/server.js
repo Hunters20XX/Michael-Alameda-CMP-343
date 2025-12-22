@@ -6,9 +6,11 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import postsRoutes from './routes/posts.js'
 import contactRoutes from './routes/contact.js';
-import { createTables } from './config/db.js'; // Import createTables from db.js
+import { createTables, query } from './config/db.js'; // Import createTables and query from db.js
 import { createContactTable } from './data/contactStore.js'; // Import createContactTable
 import { generalRateLimit } from './middleware/rateLimit.js'
 import { requestLogger, errorLogger } from './middleware/logging.js'
@@ -18,7 +20,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 8000;
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production'
+      ? process.env.FRONTEND_URL || false
+      : ["http://localhost:5173", "http://localhost:3000"],
+    methods: ["GET", "POST"]
+  }
+});
+
+const PORT = process.env.PORT || 8000;
 
 // Middleware
 app.use(cors());
@@ -29,6 +41,47 @@ app.use(requestLogger);
 
 // Rate limiting
 app.use('/api', generalRateLimit);
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Join user to general room
+  socket.join('general');
+
+  // Handle user activity
+  socket.on('user-activity', (data) => {
+    socket.to('general').emit('user-activity', {
+      ...data,
+      timestamp: new Date().toISOString(),
+      socketId: socket.id
+    });
+  });
+
+  // Handle new post notifications
+  socket.on('new-post', (postData) => {
+    socket.to('general').emit('post-created', {
+      ...postData,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Handle like updates
+  socket.on('post-liked', (likeData) => {
+    socket.to('general').emit('like-updated', {
+      ...likeData,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
+// Make io available to routes
+app.set('io', io);
 
 // Routes
 app.use('/api/posts', postsRoutes);
@@ -203,8 +256,9 @@ const startServer = async () => {
     await createContactTable(); // Call the createContactTable function
     console.log('Database initialized successfully');
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
+      console.log(`WebSocket server ready for real-time communication`);
     });
   } catch (error) {
     console.error('Failed to initialize database:', error);

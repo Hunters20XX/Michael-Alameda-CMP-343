@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './Posts.css'
 import PostCard from './PostCard'
 import { api, optimisticUpdates, errorHandlers } from '../utils/api'
+import socketManager from '../utils/socket'
 
 function Posts() {
   const [posts, setPosts] = useState([])
@@ -28,6 +29,30 @@ function Posts() {
       setFilteredPosts(filtered)
     }
   }, [posts, searchTerm])
+
+  // Real-time updates
+  useEffect(() => {
+    socketManager.connect()
+
+    // Listen for real-time like updates
+    socketManager.onLikeUpdated((data) => {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === data.postId
+            ? { ...post, likes: data.likes }
+            : post
+        )
+      )
+    })
+
+    // Track user activity
+    socketManager.trackActivity('view-posts', { page: 'posts' })
+
+    return () => {
+      // Cleanup listeners on unmount
+      socketManager.disconnect()
+    }
+  }, [])
 
   const fetchPosts = async () => {
     try {

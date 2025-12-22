@@ -3,20 +3,63 @@ import './ApiDemo.css'
 import Card from './Card'
 import Button from './Button'
 import { api, errorHandlers } from '../utils/api'
+import socketManager from '../utils/socket'
 
 function ApiDemo() {
   const [dbStatus, setDbStatus] = useState(null)
   const [postsStats, setPostsStats] = useState(null)
   const [paginatedPosts, setPaginatedPosts] = useState(null)
   const [searchResults, setSearchResults] = useState(null)
+  const [activityFeed, setActivityFeed] = useState([])
   const [loading, setLoading] = useState({})
   const [searchTerm, setSearchTerm] = useState('')
+  const [isConnected, setIsConnected] = useState(false)
 
-  // Load initial data
+  // Load initial data and setup real-time features
   useEffect(() => {
     loadDbStatus()
     loadPostsStats()
+
+    // Connect to WebSocket
+    socketManager.connect()
+    setIsConnected(socketManager.isConnected)
+
+    // Listen for real-time events
+    socketManager.onPostCreated((post) => {
+      addActivityItem('📝', `New post: "${post.title}" by ${post.author}`)
+    })
+
+    socketManager.onLikeUpdated((data) => {
+      addActivityItem('❤️', `Post liked (${data.likes} total likes)`)
+    })
+
+    socketManager.onUserActivity((activity) => {
+      if (activity.type === 'create-post') {
+        addActivityItem('✍️', `User created post: "${activity.title}"`)
+      } else if (activity.type === 'view-posts') {
+        addActivityItem('👀', 'User viewed posts page')
+      }
+    })
+
+    // Track this user's activity
+    socketManager.trackActivity('view-api-demo', { page: 'api-demo' })
+
+    return () => {
+      socketManager.disconnect()
+    }
   }, [])
+
+  // Helper to add activity items
+  const addActivityItem = (icon, message) => {
+    const newItem = {
+      id: Date.now(),
+      icon,
+      message,
+      timestamp: new Date().toLocaleTimeString()
+    }
+
+    setActivityFeed(prev => [newItem, ...prev.slice(0, 9)]) // Keep last 10 items
+  }
 
   const loadDbStatus = async () => {
     setLoading(prev => ({ ...prev, db: true }))
@@ -168,6 +211,44 @@ function ApiDemo() {
                 </div>
               </div>
             )}
+          </div>
+        </Card>
+
+        {/* Real-Time Activity Feed */}
+        <Card title="Live Activity Feed">
+          <div className="activity-section">
+            <div className="connection-status">
+              <span className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
+                {isConnected ? '🟢' : '🔴'}
+              </span>
+              <span className="status-text">
+                {isConnected ? 'Real-time connected' : 'Disconnected'}
+              </span>
+            </div>
+
+            <div className="activity-feed">
+              {activityFeed.length === 0 ? (
+                <p className="no-activity">No recent activity. Try creating posts or liking them to see real-time updates!</p>
+              ) : (
+                activityFeed.map(item => (
+                  <div key={item.id} className="activity-item">
+                    <span className="activity-icon">{item.icon}</span>
+                    <span className="activity-message">{item.message}</span>
+                    <span className="activity-time">{item.timestamp}</span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="activity-controls">
+              <Button
+                onClick={() => socketManager.trackActivity('test-activity', { message: 'Manual test' })}
+                variant="secondary"
+                size="small"
+              >
+                Send Test Activity
+              </Button>
+            </div>
           </div>
         </Card>
 

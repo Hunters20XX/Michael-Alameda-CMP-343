@@ -1,4 +1,5 @@
-import { query, pool } from '../config/db.js'; // Import pool for transactions
+import { query } from '../config/db.js'; // Import query function
+import pool from '../config/db.js'; // Import pool as default export
 
 // Functions for interacting with posts
 export const getPosts = async () => {
