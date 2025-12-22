@@ -1,8 +1,33 @@
 # Server API
 
-Express server for managing posts.
+Express server for managing posts with PostgreSQL database.
 
 ## Setup
+
+### Prerequisites
+
+- Node.js
+- PostgreSQL database
+
+### Database Setup
+
+1. Create a PostgreSQL database named `posts_db` (or update the configuration)
+
+2. Configure database connection by creating a `.env` file in the server directory:
+```bash
+cp config/database.env.example .env
+```
+
+Edit the `.env` file with your PostgreSQL credentials:
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=posts_db
+DB_USER=postgres
+DB_PASSWORD=your_password_here
+```
+
+### Installation
 
 1. Install dependencies:
 ```bash
@@ -19,7 +44,7 @@ For development with auto-reload:
 npm run dev
 ```
 
-The server will run on `http://localhost:8000`
+The server will run on `http://localhost:8000` and automatically create the required database tables on startup.
 
 ## API Endpoints
 

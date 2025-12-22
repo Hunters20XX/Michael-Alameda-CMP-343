@@ -1,145 +1,139 @@
 import express from 'express'
+import {
+  getPosts,
+  getPostById,
+  createPost,
+  updatePost,
+  likePost,
+  deletePost
+} from '../data/postsStore.js'
+
 const router = express.Router()
 
-// In-memory storage (replace with database in production)
-let posts = [
-  {
-    id: 1,
-    title: 'Getting Started with React',
-    content: 'React is a powerful library for building user interfaces. In this post, we explore the fundamentals of React components and how they work together.',
-    author: 'John Doe',
-    date: new Date().toISOString(),
-    likes: 0
-  },
-  {
-    id: 2,
-    title: 'Understanding Component Composition',
-    content: 'Component composition is a key concept in React. Learn how to build reusable components and combine them to create complex UIs.',
-    author: 'Jane Smith',
-    date: new Date(Date.now() - 86400000).toISOString(),
-    likes: 0
-  },
-  {
-    id: 3,
-    title: 'State Management Best Practices',
-    content: 'Managing state effectively is crucial for building maintainable React applications. Here are some best practices to follow.',
-    author: 'Bob Johnson',
-    date: new Date(Date.now() - 172800000).toISOString(),
-    likes: 0
-  }
-]
-
-let nextId = 4
-
 // GET /api/posts - Get all posts
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
+    const posts = await getPosts()
     res.json(posts)
   } catch (error) {
+    console.error('Error fetching posts:', error)
     res.status(500).json({ error: 'Failed to fetch posts' })
   }
 })
 
 // GET /api/posts/:id - Get a single post by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
-    const post = posts.find(p => p.id === id)
-    
+
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid post ID' })
+    }
+
+    const post = await getPostById(id)
+
     if (!post) {
       return res.status(404).json({ error: 'Post not found' })
     }
-    
+
     res.json(post)
   } catch (error) {
+    console.error('Error fetching post:', error)
     res.status(500).json({ error: 'Failed to fetch post' })
   }
 })
 
 // POST /api/posts - Create a new post
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { title, content, author } = req.body
-    
+
     if (!title || !content || !author) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: title, content, and author are required' 
+      return res.status(400).json({
+        error: 'Missing required fields: title, content, and author are required'
       })
     }
-    
-    const newPost = {
-      id: nextId++,
-      title,
-      content,
-      author,
-      date: new Date().toISOString(),
-      likes: 0
-    }
-    
-    posts.push(newPost)
+
+    const newPost = await createPost({ title, content, author })
     res.status(201).json(newPost)
   } catch (error) {
+    console.error('Error creating post:', error)
     res.status(500).json({ error: 'Failed to create post' })
   }
 })
 
 // PUT /api/posts/:id - Update a post
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
-    const postIndex = posts.findIndex(p => p.id === id)
-    
-    if (postIndex === -1) {
+    const { title, content, author } = req.body
+
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid post ID' })
+    }
+
+    if (!title && !content && !author) {
+      return res.status(400).json({ error: 'At least one field (title, content, or author) must be provided' })
+    }
+
+    const updateData = {}
+    if (title) updateData.title = title
+    if (content) updateData.content = content
+    if (author) updateData.author = author
+
+    const updatedPost = await updatePost(id, updateData)
+
+    if (!updatedPost) {
       return res.status(404).json({ error: 'Post not found' })
     }
-    
-    const { title, content, author } = req.body
-    const existingPost = posts[postIndex]
-    
-    // Update only provided fields
-    posts[postIndex] = {
-      ...existingPost,
-      ...(title && { title }),
-      ...(content && { content }),
-      ...(author && { author })
-    }
-    
-    res.json(posts[postIndex])
+
+    res.json(updatedPost)
   } catch (error) {
+    console.error('Error updating post:', error)
     res.status(500).json({ error: 'Failed to update post' })
   }
 })
 
 // PATCH /api/posts/:id/like - Increment likes for a post
-router.patch('/:id/like', (req, res) => {
+router.patch('/:id/like', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
-    const postIndex = posts.findIndex(p => p.id === id)
-    
-    if (postIndex === -1) {
+
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid post ID' })
+    }
+
+    const updatedPost = await likePost(id)
+
+    if (!updatedPost) {
       return res.status(404).json({ error: 'Post not found' })
     }
-    
-    posts[postIndex].likes = (posts[postIndex].likes || 0) + 1
-    res.json(posts[postIndex])
+
+    res.json(updatedPost)
   } catch (error) {
+    console.error('Error updating likes:', error)
     res.status(500).json({ error: 'Failed to update likes' })
   }
 })
 
 // DELETE /api/posts/:id - Delete a post
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id)
-    const postIndex = posts.findIndex(p => p.id === id)
-    
-    if (postIndex === -1) {
+
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid post ID' })
+    }
+
+    const deletedPost = await deletePost(id)
+
+    if (!deletedPost) {
       return res.status(404).json({ error: 'Post not found' })
     }
-    
-    const deletedPost = posts.splice(postIndex, 1)[0]
+
     res.json({ message: 'Post deleted successfully', post: deletedPost })
   } catch (error) {
+    console.error('Error deleting post:', error)
     res.status(500).json({ error: 'Failed to delete post' })
   }
 })
