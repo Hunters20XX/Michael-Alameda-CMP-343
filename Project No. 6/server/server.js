@@ -21,12 +21,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client/dist'))); // Correct path for static files
 
+// Routes
+app.use('/api/posts', postsRoutes);
+
 app.get('*', (req,res) => {
   res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
-
-// Routes
-app.use('/api/posts', postsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
