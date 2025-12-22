@@ -1,28 +1,22 @@
 import express from 'express'
 import { createContactMessage } from '../data/contactStore.js'
+import { validateContactData } from '../middleware/validation.js'
+import { strictRateLimit } from '../middleware/rateLimit.js'
 
 const router = express.Router()
 
 // POST /api/contact - Create a new contact message
-router.post('/', async (req, res) => {
+router.post('/', strictRateLimit, validateContactData, async (req, res) => {
   try {
     const { name, email, subject, message } = req.body
 
-    if (!name || !email || !subject || !message) {
-      return res.status(400).json({
-        error: 'Missing required fields: name, email, subject, and message are required'
-      })
-    }
+    const newMessage = await createContactMessage({
+      name: name.trim(),
+      email: email.trim(),
+      subject: subject.trim(),
+      message: message.trim()
+    })
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        error: 'Invalid email format'
-      })
-    }
-
-    const newMessage = await createContactMessage({ name, email, subject, message })
     res.status(201).json({
       message: 'Contact message sent successfully',
       data: newMessage
