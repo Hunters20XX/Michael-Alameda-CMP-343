@@ -1,4 +1,4 @@
-import { query } from './dbs.js'
+const pool = require('./db.js')
 
 export const createTables = async () => {
   try {
