@@ -23,7 +23,6 @@ const PORT = 8000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../client/dist'))); // Correct path for static files
 
 // Logging
 app.use(requestLogger);
@@ -35,14 +34,69 @@ app.use('/api', generalRateLimit);
 app.use('/api/posts', postsRoutes);
 app.use('/api/contact', contactRoutes);
 
-app.get('*', (req,res) => {
-  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+// Static files (skip API routes)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  next();
 });
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
+
+// Database monitoring endpoint
+app.get('/api/db/status', async (req, res) => {
+  try {
+    const start = Date.now()
+
+    // Test database connection
+    const result = await query('SELECT NOW(), pg_database_size(current_database()) as db_size')
+    const queryTime = Date.now() - start
+
+    // Get connection stats
+    const poolStats = {
+      totalCount: pool.totalCount,
+      idleCount: pool.idleCount,
+      waitingCount: pool.waitingCount
+    }
+
+    // Get table statistics
+    const tableStats = await query(`
+      SELECT
+        schemaname,
+        tablename,
+        n_tup_ins as inserts,
+        n_tup_upd as updates,
+        n_tup_del as deletes
+      FROM pg_stat_user_tables
+      WHERE schemaname = 'public'
+    `)
+
+    res.json({
+      status: 'healthy',
+      timestamp: result.rows[0].now,
+      databaseSize: result.rows[0].db_size,
+      queryTime: `${queryTime}ms`,
+      connectionPool: poolStats,
+      tableStats: tableStats.rows,
+      performance: {
+        queryTime,
+        status: queryTime < 100 ? 'excellent' : queryTime < 500 ? 'good' : 'needs_attention'
+      }
+    })
+  } catch (error) {
+    console.error('Database status check failed:', error)
+    res.status(500).json({
+      status: 'unhealthy',
+      error: 'Database connection failed',
+      timestamp: new Date().toISOString()
+    })
+  }
+})
 
 // API Documentation endpoint
 app.get('/api/docs', (req, res) => {

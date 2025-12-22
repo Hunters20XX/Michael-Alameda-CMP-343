@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Posts.css'
 import PostCard from './PostCard'
-
-const API_URL = '/api/posts'
+import { api, optimisticUpdates, errorHandlers } from '../utils/api'
 
 function Posts() {
   const [posts, setPosts] = useState([])
@@ -34,17 +33,12 @@ function Posts() {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(API_URL)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch posts')
-      }
-      
-      const data = await response.json()
+      const data = await api.posts.getAll()
       setPosts(data)
       setFilteredPosts(data)
     } catch (err) {
-      setError(err.message)
+      const errorInfo = errorHandlers.handleApiError(err, 'fetching posts')
+      setError(errorHandlers.getUserFriendlyMessage(errorInfo.type))
       console.error('Error fetching posts:', err)
     } finally {
       setLoading(false)
@@ -52,27 +46,31 @@ function Posts() {
   }
 
   const handleLike = async (postId) => {
+    // Find the current post to get its current likes count
+    const currentPost = posts.find(post => post.id === postId)
+    if (!currentPost) return
+
+    // Create optimistic update
+    const optimisticUpdate = optimisticUpdates.createLikeUpdate(postId, currentPost.likes)
+
+    // Apply optimistic update immediately
+    optimisticUpdate.apply(posts, setPosts)
+
     try {
-      const response = await fetch(`${API_URL}/${postId}/like`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to update likes')
-      }
-      
-      const updatedPost = await response.json()
-      
-      // Update the post in the local state
+      const updatedPost = await api.posts.like(postId)
+
+      // Update with real data from server
       setPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId ? updatedPost : post
         )
       )
     } catch (err) {
+      // Revert optimistic update on error
+      optimisticUpdate.rollback(posts, setPosts)
+
+      const errorInfo = errorHandlers.handleApiError(err, 'liking post')
+      alert(`Failed to like post: ${errorHandlers.getUserFriendlyMessage(errorInfo.type)}`)
       console.error('Error updating likes:', err)
     }
   }

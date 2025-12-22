@@ -11,6 +11,7 @@ function Sidebar({ currentPage, onNavigate, isOpen, onClose }) {
 
   const sidebarItems = [
     { label: 'Dashboard', page: 'dashboard' },
+    { label: 'API Demo', page: 'api-demo' },
     { label: 'Settings', page: 'settings' },
     { label: 'Profile', page: 'profile' }
   ]

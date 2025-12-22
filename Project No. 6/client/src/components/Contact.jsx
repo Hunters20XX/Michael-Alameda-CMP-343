@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './Contact.css'
 import Card from './Card'
 import Button from './Button'
+import { api, errorHandlers } from '../utils/api'
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -24,20 +25,13 @@ function Contact() {
     e.preventDefault()
 
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      const result = await api.contact.send({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject.trim(),
+        message: formData.message.trim()
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to send message')
-      }
-
-      const result = await response.json()
       console.log('Message sent successfully:', result)
 
       setSubmitted(true)
@@ -47,8 +41,9 @@ function Contact() {
         setSubmitted(false)
       }, 3000)
     } catch (error) {
+      const errorInfo = errorHandlers.handleApiError(error, 'sending contact message')
+      alert(`Failed to send message: ${errorHandlers.getUserFriendlyMessage(errorInfo.type)}`)
       console.error('Error sending message:', error)
-      alert(`Failed to send message: ${error.message}`)
     }
   }
 

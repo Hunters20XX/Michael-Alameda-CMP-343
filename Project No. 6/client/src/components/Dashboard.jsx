@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './Dashboard.css'
 import Card from './Card'
 import Button from './Button'
+import { api, errorHandlers } from '../utils/api'
 
 function Dashboard() {
-  const [stats] = useState({
+  const [posts, setPosts] = useState([])
+  const [stats, setStats] = useState({
     totalPosts: 24,
     totalViews: 1250,
     totalLikes: 342,
@@ -18,6 +20,24 @@ function Dashboard() {
     author: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Load real stats on component mount
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const realStats = await api.posts.getStats()
+        setStats({
+          totalPosts: realStats.total_posts,
+          totalViews: 1250, // Keep mock data for now
+          totalLikes: realStats.total_likes,
+          followers: realStats.unique_authors
+        })
+      } catch (error) {
+        console.error('Error loading stats:', error)
+      }
+    }
+    loadStats()
+  }, [])
 
   const handleInputChange = (e) => {
     setFormData({
@@ -36,33 +56,54 @@ function Dashboard() {
 
     setIsSubmitting(true)
 
+    // Create optimistic update
+    const optimisticUpdate = optimisticUpdates.createPostUpdate({
+      title: formData.title.trim(),
+      content: formData.content.trim(),
+      author: formData.author.trim()
+    })
+
+    // Apply optimistic update immediately
+    optimisticUpdate.apply(posts, setPosts)
+
+    // Reset form immediately
+    setFormData({ title: '', content: '', author: '' })
+    setShowCreateForm(false)
+
     try {
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      const newPost = await api.posts.create({
+        title: optimisticUpdate.postData.title,
+        content: optimisticUpdate.postData.content,
+        author: optimisticUpdate.postData.author
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create post')
-      }
+      // Replace optimistic post with real post
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === optimisticUpdate.tempId
+            ? { ...newPost, _isOptimistic: false }
+            : post
+        )
+      )
 
-      const newPost = await response.json()
       console.log('Post created successfully:', newPost)
-
-      // Reset form
-      setFormData({ title: '', content: '', author: '' })
-      setShowCreateForm(false)
-
-      // Show success message
       alert('Post created successfully!')
 
     } catch (error) {
+      // Remove optimistic post on error
+      optimisticUpdate.rollback(posts, setPosts)
+
+      // Restore form data
+      setFormData({
+        title: optimisticUpdate.postData.title,
+        content: optimisticUpdate.postData.content,
+        author: optimisticUpdate.postData.author
+      })
+      setShowCreateForm(true)
+
+      const errorInfo = errorHandlers.handleApiError(error, 'creating post')
+      alert(`Failed to create post: ${errorHandlers.getUserFriendlyMessage(errorInfo.type)}`)
       console.error('Error creating post:', error)
-      alert(`Failed to create post: ${error.message}`)
     } finally {
       setIsSubmitting(false)
     }

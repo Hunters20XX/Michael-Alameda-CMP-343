@@ -1,4 +1,4 @@
-import { query } from '../config/db.js'; // Import only 'query'
+import { query, pool } from '../config/db.js'; // Import pool for transactions
 
 // Functions for interacting with posts
 export const getPosts = async () => {
@@ -87,6 +87,126 @@ export const deletePost = async (id) => {
     return result.rows[0];
   } catch (error) {
     console.error('Error deleting post:', error);
+    throw error;
+  }
+};
+
+// Advanced CRUD operations for demonstration
+
+// Get posts with pagination
+export const getPostsPaginated = async (page = 1, limit = 10) => {
+  try {
+    const offset = (page - 1) * limit;
+    const result = await query(
+      'SELECT * FROM posts ORDER BY date DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+
+    // Get total count for pagination metadata
+    const countResult = await query('SELECT COUNT(*) as total FROM posts');
+    const total = parseInt(countResult.rows[0].total);
+
+    return {
+      posts: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching paginated posts:', error);
+    throw error;
+  }
+};
+
+// Search posts by title, content, or author
+export const searchPosts = async (searchTerm, page = 1, limit = 10) => {
+  try {
+    const offset = (page - 1) * limit;
+    const searchPattern = `%${searchTerm}%`;
+
+    const result = await query(`
+      SELECT * FROM posts
+      WHERE title ILIKE $1 OR content ILIKE $1 OR author ILIKE $1
+      ORDER BY date DESC
+      LIMIT $2 OFFSET $3
+    `, [searchPattern, limit, offset]);
+
+    const countResult = await query(`
+      SELECT COUNT(*) as total FROM posts
+      WHERE title ILIKE $1 OR content ILIKE $1 OR author ILIKE $1
+    `, [searchPattern]);
+
+    const total = parseInt(countResult.rows[0].total);
+
+    return {
+      posts: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+        searchTerm
+      }
+    };
+  } catch (error) {
+    console.error('Error searching posts:', error);
+    throw error;
+  }
+};
+
+// Get posts statistics
+export const getPostsStats = async () => {
+  try {
+    const result = await query(`
+      SELECT
+        COUNT(*) as total_posts,
+        COUNT(CASE WHEN date >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as posts_last_30_days,
+        SUM(likes) as total_likes,
+        AVG(likes) as avg_likes_per_post,
+        MAX(likes) as max_likes,
+        COUNT(DISTINCT author) as unique_authors
+      FROM posts
+    `);
+
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error fetching posts statistics:', error);
+    throw error;
+  }
+};
+
+// Bulk operations for demonstration
+export const bulkUpdateLikes = async (postIds, likeIncrement = 1) => {
+  try {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const placeholders = postIds.map((_, index) => `$${index + 2}`).join(',');
+      const queryText = `
+        UPDATE posts
+        SET likes = likes + $1
+        WHERE id IN (${placeholders})
+        RETURNING *
+      `;
+
+      const result = await client.query(queryText, [likeIncrement, ...postIds]);
+      await client.query('COMMIT');
+
+      console.log(`Bulk updated ${result.rowCount} posts`);
+      return result.rows;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error in bulk update:', error);
     throw error;
   }
 };

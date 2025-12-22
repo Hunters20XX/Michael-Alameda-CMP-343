@@ -8,6 +8,7 @@ import Settings from './components/Settings'
 import About from './components/About'
 import Services from './components/Services'
 import Contact from './components/Contact'
+import ApiDemo from './components/ApiDemo'
 import './App.css'
 
 function App() {
@@ -36,6 +37,8 @@ function App() {
         return <Profile />
       case 'settings':
         return <Settings />
+      case 'api-demo':
+        return <ApiDemo />
       case 'posts':
       case 'home':
       default:
