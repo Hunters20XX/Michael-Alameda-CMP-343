@@ -12,3 +12,10 @@
   width: 100%;
   overflow-x: hidden;
 }
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .app-content {
+    flex-direction: column;
+  }
+}

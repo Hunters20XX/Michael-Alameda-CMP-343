@@ -1,7 +1,7 @@
 import './Nav.css'
 import Logo from './Logo'
 
-function Nav({ items = [], currentPage, onNavigate }) {
+function Nav({ items = [], currentPage, onNavigate, onMenuToggle, isMenuOpen }) {
   const defaultItems = [
     { label: 'Home', page: 'home' },
     { label: 'About', page: 'about' },
@@ -24,6 +24,16 @@ function Nav({ items = [], currentPage, onNavigate }) {
         <div className="nav-logo">
           <Logo text="MyApp" size="medium" />
         </div>
+
+        {/* Mobile menu button */}
+        <button
+          className="mobile-menu-btn"
+          onClick={onMenuToggle}
+          aria-label="Toggle menu"
+        >
+          <span className={`hamburger ${isMenuOpen ? 'open' : ''}`}></span>
+        </button>
+
         <ul className="nav-list">
           {navItems.map((item, index) => (
             <li key={index} className="nav-item">

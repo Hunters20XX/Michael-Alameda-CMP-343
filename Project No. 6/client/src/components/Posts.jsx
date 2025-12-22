@@ -6,13 +6,29 @@ const API_URL = '/api/posts'
 
 function Posts() {
   const [posts, setPosts] = useState([])
+  const [filteredPosts, setFilteredPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Fetch posts from API
   useEffect(() => {
     fetchPosts()
   }, [])
+
+  // Filter posts based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredPosts(posts)
+    } else {
+      const filtered = posts.filter(post =>
+        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.author.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      setFilteredPosts(filtered)
+    }
+  }, [posts, searchTerm])
 
   const fetchPosts = async () => {
     try {
@@ -26,6 +42,7 @@ function Posts() {
       
       const data = await response.json()
       setPosts(data)
+      setFilteredPosts(data)
     } catch (err) {
       setError(err.message)
       console.error('Error fetching posts:', err)
@@ -84,11 +101,27 @@ function Posts() {
   return (
     <section className="posts">
       <h2 className="posts-title">Latest Posts</h2>
-      {posts.length === 0 ? (
-        <div className="posts-empty">No posts available</div>
+
+      <div className="posts-search">
+        <input
+          type="text"
+          placeholder="Search posts by title, content, or author..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+      </div>
+
+      {filteredPosts.length === 0 && posts.length > 0 ? (
+        <div className="posts-no-results">
+          <p>No posts match your search: "{searchTerm}"</p>
+          <button onClick={() => setSearchTerm('')} className="clear-search-btn">
+            Clear search
+          </button>
+        </div>
       ) : (
         <div className="posts-list">
-          {posts.map(post => (
+          {filteredPosts.map(post => (
             <PostCard
               key={post.id}
               title={post.title}

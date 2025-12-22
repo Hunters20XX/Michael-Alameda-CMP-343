@@ -6,8 +6,10 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import postsRoutes from './routes/posts.js';
+import postsRoutes from './routes/posts.js'
+import contactRoutes from './routes/contact.js';
 import { createTables } from './config/db.js'; // Import createTables from db.js
+import { createContactTable } from './data/contactStore.js'; // Import createContactTable
 
 // ES modules equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +25,7 @@ app.use(express.static(path.join(__dirname, '../client/dist'))); // Correct path
 
 // Routes
 app.use('/api/posts', postsRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.get('*', (req,res) => {
   res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
@@ -38,6 +41,7 @@ const startServer = async () => {
   try {
     console.log('Initializing database...');
     await createTables(); // Call the createTables function
+    await createContactTable(); // Call the createContactTable function
     console.log('Database initialized successfully');
 
     app.listen(PORT, () => {

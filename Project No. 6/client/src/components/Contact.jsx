@@ -20,15 +20,36 @@ function Contact() {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Simulate form submission
-    console.log('Form submitted:', formData)
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send message')
+      }
+
+      const result = await response.json()
+      console.log('Message sent successfully:', result)
+
+      setSubmitted(true)
       setFormData({ name: '', email: '', subject: '', message: '' })
-    }, 3000)
+
+      setTimeout(() => {
+        setSubmitted(false)
+      }, 3000)
+    } catch (error) {
+      console.error('Error sending message:', error)
+      alert(`Failed to send message: ${error.message}`)
+    }
   }
 
   return (

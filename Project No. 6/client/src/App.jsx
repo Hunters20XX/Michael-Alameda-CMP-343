@@ -12,6 +12,15 @@ import './App.css'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home')
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const handleMenuToggle = () => {
+    setIsMenuOpen(!isMenuOpen)
+  }
+
+  const handleMenuClose = () => {
+    setIsMenuOpen(false)
+  }
 
   const renderPage = () => {
     switch (currentPage) {
@@ -36,12 +45,22 @@ function App() {
 
   return (
     <div className="app">
-      <Nav currentPage={currentPage} onNavigate={setCurrentPage} />
+      <Nav
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+        onMenuToggle={handleMenuToggle}
+        isMenuOpen={isMenuOpen}
+      />
       <div className="app-content">
-        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+        <Sidebar
+          currentPage={currentPage}
+          onNavigate={setCurrentPage}
+          isOpen={isMenuOpen}
+          onClose={handleMenuClose}
+        />
         {renderPage()}
       </div>
-      </div>
+    </div>
   )
 }
 
