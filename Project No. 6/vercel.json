@@ -8,9 +8,21 @@
     ],
     "routes": [
         {
+            "src": "/api/(.*)",
+            "dest": "server/server.js"
+        },
+        {
             "src": "/(.*)",
             "dest": "server/server.js"
         }
     ],
-    "buildCommand": "npm install --prefix server && npm install --prefix client && npm run build --prefix client"
+    "buildCommand": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
+    "functions": {
+        "server/server.js": {
+            "maxDuration": 30
+        }
+    },
+    "env": {
+        "NODE_ENV": "production"
+    }
 }
